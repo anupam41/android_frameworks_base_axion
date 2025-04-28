@@ -61,6 +61,7 @@ import android.os.BatteryManager;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.os.RemoteException;
 import android.os.ServiceManager;
@@ -437,6 +438,8 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces, Medi
     private final NotificationsController mNotificationsController;
     private final StatusBarSignalPolicy mStatusBarSignalPolicy;
     private final StatusBarHideIconsForBouncerManager mStatusBarHideIconsForBouncerManager;
+    
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     /** Controller for the Shade. */
     private final ShadeSurface mShadeSurface;
@@ -2660,6 +2663,8 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces, Medi
             DejankUtils.stopDetectingBlockingIpcs(tag);
             com.android.systemui.util.ScrimUtils.getInstance(mContext).onScreenStateChange();
             doCpuStandbyOptimization(true);
+            // make sure we do garbage collection at screen off but delay it to avoid black wallpaper
+            mHandler.postDelayed(mSystemUiGcOpt, 1000);
         }
 
         @Override
@@ -2727,6 +2732,7 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces, Medi
             });
             DejankUtils.stopDetectingBlockingIpcs(tag);
             doCpuStandbyOptimization(false);
+            mHandler.removeCallbacks(mSystemUiGcOpt);
         }
 
         /**
@@ -2815,6 +2821,16 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces, Medi
                chargePlug == BatteryManager.BATTERY_PLUGGED_USB ||
                chargePlug == BatteryManager.BATTERY_PLUGGED_WIRELESS;
     }
+
+    private final Runnable mSystemUiGcOpt = new Runnable() {
+        @Override
+        public void run() {
+            System.gc();
+            System.runFinalization();
+            System.gc();
+            Log.v("GcOpt", "performing garbage collection for SystemUI");
+        }
+    };
 
     /**
      * We need to disable touch events because these might
