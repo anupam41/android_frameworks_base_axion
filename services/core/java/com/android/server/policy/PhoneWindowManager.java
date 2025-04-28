@@ -7067,6 +7067,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         getPocketModeInstance().onInteractiveChanged(false);
         
         mHandler.removeCallbacks(mMemoryOpt);
+
+        // make sure we do garbage collection at screen off but delay it to avoid black wallpaper
+        mHandler.postDelayed(mSystemServerGcOpt, 1000);
     }
 
     // Called on the PowerManager's Notifier thread.
@@ -7125,6 +7128,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mHandler.removeCallbacks(mMemoryOpt);
         mHandler.postDelayed(mMemoryOpt, 1250 /* allowance time */);
 
+        // remove pending system server gc for frequent screen state changes
+        mHandler.removeCallbacks(mSystemServerGcOpt);
+
         mIsGoingToSleepDefaultDisplay = false;
         mDefaultDisplayPolicy.setAwake(true);
 
@@ -7155,6 +7161,16 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             releaseMemoryAtScreenOn();
             loadProcessMemory("com.android.systemui");
             loadProcessMemory("com.android.launcher3");
+        }
+    };
+    
+    private final Runnable mSystemServerGcOpt = new Runnable() {
+        @Override
+        public void run() {
+            System.gc();
+            System.runFinalization();
+            System.gc();
+            Log.v("GcOpt", "performing garbage collection for system_server");
         }
     };
 
