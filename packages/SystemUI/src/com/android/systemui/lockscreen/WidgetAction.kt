@@ -25,6 +25,11 @@ import com.android.systemui.statusbar.connectivity.*
 import com.android.systemui.statusbar.policy.*
 import com.android.systemui.util.*
 
+enum class WidgetShape {
+    ROUND,
+    PILL
+}
+
 enum class WidgetAction(
     val activeRes: Int,
     val inactiveRes: Int,
@@ -34,6 +39,7 @@ enum class WidgetAction(
     val unregisterCallback: (LockScreenWidgetsController.ViewController) -> Unit = {}
 ) {
     WIFI(
+        shape = WidgetShape.ROUND,
         LsWidgetsRes.WIFI_ACTIVE, LsWidgetsRes.WIFI_INACTIVE,
         onClick = { it.toggleWiFi() },
         onLongClick = { c, v -> c.showInternetDialog(v); true },
@@ -45,6 +51,7 @@ enum class WidgetAction(
         }
     ),
     DATA(
+        shape = WidgetShape.ROUND,
         LsWidgetsRes.DATA_ACTIVE, LsWidgetsRes.DATA_INACTIVE,
         onClick = { it.toggleMobileData() },
         onLongClick = { c, v -> c.showInternetDialog(v); true },
@@ -56,6 +63,7 @@ enum class WidgetAction(
         }
     ),
     RINGER(
+        shape = WidgetShape.ROUND,
         LsWidgetsRes.RINGER_ACTIVE, LsWidgetsRes.RINGER_INACTIVE,
         onClick = { it.toggleRingerMode() },
         registerCallback = { controller ->
@@ -71,6 +79,7 @@ enum class WidgetAction(
         }
     ),
     BT(
+        shape = WidgetShape.ROUND,
         LsWidgetsRes.BT_ACTIVE, LsWidgetsRes.BT_INACTIVE,
         onClick = { it.toggleBluetooth() },
         onLongClick = { c, v -> c.showBluetoothDialog(v); true },
@@ -82,6 +91,7 @@ enum class WidgetAction(
         }
     ),
     TORCH(
+        shape = WidgetShape.ROUND,
         LsWidgetsRes.TORCH_RES_ACTIVE, LsWidgetsRes.TORCH_RES_INACTIVE,
         onClick = { it.toggleFlashlight() },
         registerCallback = { controller ->
@@ -92,6 +102,7 @@ enum class WidgetAction(
         }
     ),
     MEDIA(
+        shape = WidgetShape.ROUND,
         R.drawable.ic_media_pause, R.drawable.ic_media_play,
         onClick = { it.toggleMediaPlaybackState() },
         registerCallback = { controller ->
@@ -102,6 +113,7 @@ enum class WidgetAction(
         }
     ),
     HOTSPOT(
+        shape = WidgetShape.ROUND,
         LsWidgetsRes.HOTSPOT_ACTIVE, LsWidgetsRes.HOTSPOT_INACTIVE,
         onClick = { it.toggleHotspot() },
         onLongClick = { c, v -> c.showInternetDialog(v); true },
@@ -113,19 +125,96 @@ enum class WidgetAction(
         }
     ),
     TIMER(
+        shape = WidgetShape.ROUND,
         R.drawable.ic_alarm, R.drawable.ic_alarm,
         onClick = { it.activityLauncherUtils.launchTimer() }
     ),
     CALCULATOR(
+        shape = WidgetShape.ROUND,
         R.drawable.ic_calculator, R.drawable.ic_calculator,
         onClick = { it.activityLauncherUtils.launchCalculator() }
     ),
     WALLET(
+        shape = WidgetShape.ROUND,
         R.drawable.ic_wallet_lockscreen, R.drawable.ic_wallet_lockscreen,
         onClick = { it.activityLauncherUtils.launchWalletApp() }
     ),
     QRSCANNER(
+        shape = WidgetShape.ROUND,
         R.drawable.ic_qr_code_scanner, R.drawable.ic_qr_code_scanner,
         onClick = { it.activityLauncherUtils.launchQrScanner() }
+    ),
+    WEATHER_TEMP(
+        shape = WidgetShape.ROUND,
+        activeRes = R.drawable.ic_weather_temp,
+        inactiveRes = R.drawable.ic_weather_temp,
+        onClick = { /* handled by view/controller */ },
+        registerCallback = { it.initWeatherTempWidget() },
+        unregisterCallback = { it.destroyWeatherTempWidget() }
+    ),
+
+    WEATHER_HUMIDITY(
+        shape = WidgetShape.ROUND,
+        activeRes = R.drawable.ic_humidity,
+        inactiveRes = R.drawable.ic_humidity,
+        onClick = { /* handled by view/controller */ },
+        registerCallback = { it.initWeatherHumidityWidget() },
+        unregisterCallback = { it.destroyWeatherHumidityWidget() }
+    ),
+
+    WEATHER_RANGE(
+        shape = WidgetShape.ROUND,
+        activeRes = R.drawable.ic_temp_range,
+        inactiveRes = R.drawable.ic_temp_range,
+        onClick = { /* handled by view/controller */ },
+        registerCallback = { it.initWeatherRangeWidget() },
+        unregisterCallback = { it.destroyWeatherRangeWidget() }
+    ),
+
+    // --- Pill Widgets ---
+    BT_BATTERY(
+        shape = WidgetShape.PILL,
+        activeRes = R.drawable.ic_bt_battery,
+        inactiveRes = R.drawable.ic_bt_battery,
+        onClick = { /* handled by controller */ },
+        registerCallback = { it.initBatteryCombinedWidget() },
+        unregisterCallback = { it.destroyBatteryCombinedWidget() }
+    ),
+
+    WEATHER(
+        shape = WidgetShape.PILL,
+        activeRes = R.drawable.ic_weather_sunny,
+        inactiveRes = R.drawable.ic_weather_sunny,
+        onClick = { it.activityLauncherUtils.launchWeatherApp() },
+        registerCallback = { it.initWeatherWidget() },
+        unregisterCallback = { it.destroyWeatherWidget() }
+    ),
+    
+    WELLBEING(
+        shape = WidgetShape.ROUND,
+        activeRes = R.drawable.ic_wellbeing,
+        inactiveRes = R.drawable.ic_wellbeing,
+        onClick = { it.activityLauncherUtils.launchDigitalWellbeingApp() },
+        registerCallback = { it.initWellbeingWidget() },
+        unregisterCallback = { it.destroyWellbeingWidget() }
     );
+
+    companion object {
+        private const val SETTING_KEY = "lockscreen_widgets_extras"
+
+        fun getEnabledFromSettings(context: Context): List<WidgetAction> {
+            val raw = Settings.System.getStringForUser(
+                context.contentResolver, SETTING_KEY, android.os.UserHandle.USER_CURRENT
+            )
+            if (raw.isNullOrEmpty()) return listOf(WIFI, BT, RINGER, TORCH)
+            return raw.split(",").mapNotNull { name -> values().find { it.name == name } }
+        }
+
+        fun saveEnabledToSettings(context: Context, actions: List<WidgetAction>) {
+            val value = actions.joinToString(",") { it.name }
+            Settings.System.putStringForUser(
+                context.contentResolver, SETTING_KEY, value, android.os.UserHandle.USER_CURRENT
+            )
+        }
+    }
 }

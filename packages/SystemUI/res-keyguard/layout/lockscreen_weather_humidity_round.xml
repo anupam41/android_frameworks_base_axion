@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="@dimen/kg_widget_circle_size"
+    android:layout_height="@dimen/kg_widget_circle_size"
+    android:layout_marginHorizontal="@dimen/kg_widgets_margin_horizontal"
+    android:background="@drawable/bg_widget_circle"
+    android:gravity="center">
+
+    <ImageView
+        android:id="@+id/round_icon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:tint="?android:attr/textColorPrimary"
+        android:layout_gravity="center" />
+
+    <TextView
+        android:id="@+id/round_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="--%"
+        android:textSize="10sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="4dp" />
+</FrameLayout>

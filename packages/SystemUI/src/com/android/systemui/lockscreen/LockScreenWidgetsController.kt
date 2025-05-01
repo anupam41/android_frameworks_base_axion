@@ -48,6 +48,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
 object LockScreenWidgetsController {
+    private lateinit var container: GridLayout
     private val viewControllers = mutableMapOf<View, ViewController>()
 
     fun addView(view: View) {
@@ -103,6 +104,18 @@ object LockScreenWidgetsController {
         }
         
         fun deInit() {
+            (widgetButtons[WidgetAction.BT_BATTERY]
+            ?.getTag(R.id.widget_controller_tag) as? WidgetBatteryCombinedController)?.destroy()
+            (widgetButtons[WidgetAction.WEATHER]
+            ?.getTag(R.id.widget_controller_tag) as? WidgetWeatherController)?.destroy()
+            (widgetButtons[WidgetAction.WEATHER_TEMP]
+            ?.getTag(R.id.widget_controller_tag) as? WidgetWeatherTempController)?.destroy()
+            (widgetButtons[WidgetAction.WEATHER_HUMIDITY]
+            ?.getTag(R.id.widget_controller_tag) as? WidgetWeatherHumidityController)?.destroy()
+            (widgetButtons[WidgetAction.WEATHER_RANGE]
+            ?.getTag(R.id.widget_controller_tag) as? WidgetWeatherRangeController)?.destroy()
+            (widgetButtons[WidgetAction.WELLBEING]
+            ?.getTag(R.id.widget_controller_tag) as? WidgetWellbeingController)?.destroy()
             clearCallbacks()
             scope.cancel()
         }
@@ -143,44 +156,51 @@ object LockScreenWidgetsController {
 
         fun updateWidgetViews() {
             val widgetsSetting = Settings.System.getStringForUser(
-                context.contentResolver, "lockscreen_widgets_extras", UserHandle.USER_CURRENT
+                 context.contentResolver, "lockscreen_widgets_extras", UserHandle.USER_CURRENT
             )
-            
+
             mainWidgets.clear()
             widgetsSetting?.split(",")
-                ?.mapNotNull { type ->
-                    WidgetAction.values().find { it.name.equals(type.trim(), ignoreCase = true) }
-                }
-                ?.let(mainWidgets::addAll)
+                 ?.mapNotNull { type ->
+                     WidgetAction.values().find { it.name.equals(type.trim(), ignoreCase = true) }
+                 }
+                 ?.let(mainWidgets::addAll)
 
             updateColors()
+            container.removeAllViews()
+            widgetButtons.clear()
 
-            LsWidgetsRes.WIDGETS_VIEW_IDS.forEach { id ->
-                view.findViewById<LaunchableImageView>(id)?.visibility = View.GONE
-            }
+            val arrangedWidgets = LockScreenWidgetLayoutEngine().arrangeWidgets(mainWidgets)
 
-            val widgetViews = LsWidgetsRes.WIDGETS_VIEW_IDS
-                .map { view.findViewById<LaunchableImageView>(it) }
-                .filterNotNull()
+            arrangedWidgets.forEach { action ->
+                val layoutId = when (action.shape) {
+                   WidgetShape.ROUND -> R.layout.lockscreen_round_widget
+                   WidgetShape.PILL -> R.layout.lockscreen_pill_widget
+                }
 
-            mainWidgets.forEachIndexed { index, action ->
-                if (index >= widgetViews.size) return@forEachIndexed
-                val widgetView = widgetViews[index]
-                widgetView.visibility = View.VISIBLE
+                val widgetView = LayoutInflater.from(context).inflate(layoutId, container, false)
+                val layoutParams = GridLayout.LayoutParams().apply {
+                   columnSpec = GridLayout.spec(GridLayout.UNDEFINED, if (action.shape == WidgetShape.PILL) 2 else 1)
+                   width = GridLayout.LayoutParams.WRAP_CONTENT
+                   height = GridLayout.LayoutParams.WRAP_CONTENT
+                }
+                widgetView.layoutParams = layoutParams
+
+                container.addView(widgetView)
                 setUpWidgetView(widgetView, action)
-                updateWidgetResources(widgetView, action)
+                widgetButtons[action] = widgetView as? LaunchableImageView ?: return@forEach
             }
 
             clearCallbacks()
 
-            Dependency.get(ConfigurationController::class.java).addCallback(callbacks.configurationListener)
-            Dependency.get(StatusBarStateController::class.java).addCallback(callbacks.statusBarStateListener)
-            callbacks.statusBarStateListener.onDozingChanged(
-                Dependency.get(StatusBarStateController::class.java).isDozing
-            )
+        Dependency.get(ConfigurationController::class.java).addCallback(callbacks.configurationListener)
+        Dependency.get(StatusBarStateController::class.java).addCallback(callbacks.statusBarStateListener)
+        callbacks.statusBarStateListener.onDozingChanged(
+        Dependency.get(StatusBarStateController::class.java).isDozing
+             )
 
-            mainWidgets.forEach { it.registerCallback(this) }
-            updateContainerVisibility()
+             mainWidgets.forEach { it.registerCallback(this) }
+             updateContainerVisibility()
         }
 
         fun updateContainerVisibility() {
@@ -202,6 +222,49 @@ object LockScreenWidgetsController {
             }
             iv.setImageResource(action.inactiveRes)
             widgetButtons[action] = iv
+        }
+        private fun setUpWidgetView(view: View, action: WidgetAction) {
+           view.setOnClickListener { action.onClick(this) }
+           action.onLongClick?.let { view.setOnLongClickListener { v -> it(this, v) } }
+           
+           when (action) {
+               WidgetAction.BT_BATTERY -> {
+                    val controller = WidgetBatteryCombinedController(context, widgetView)
+                    widgetView.setTag(R.id.widget_controller_tag, controller)
+               }
+               WidgetAction.WEATHER -> {
+                    val controller = WidgetWeatherController(context, widgetView)
+                    widgetView.setTag(R.id.widget_controller_tag, controller)
+               }
+               WidgetAction.WEATHER_TEMP -> {
+                    val controller = WidgetWeatherTempController(context, widgetView)
+                    widgetView.setTag(R.id.widget_controller_tag, controller)
+               }
+               WidgetAction.WEATHER_HUMIDITY -> {
+                    val controller = WidgetWeatherHumidityController(context, widgetView)
+                    widgetView.setTag(R.id.widget_controller_tag, controller)
+               }
+               WidgetAction.WEATHER_RANGE -> {
+                    val controller = WidgetWeatherRangeController(context, widgetView)
+                   widgetView.setTag(R.id.widget_controller_tag, controller)
+               }
+               WidgetAction.WELLBEING -> {
+                    val controller = WidgetWellbeingController(context, widgetView)
+                   widgetView.setTag(R.id.widget_controller_tag, controller)
+               }
+           
+           else -> {
+             when (action.shape) {
+                WidgetShape.ROUND -> view.findViewById<ImageView>(R.id.round_icon)
+                     ?.setImageResource(action.inactiveRes)
+                WidgetShape.PILL -> {
+                view.findViewById<ImageView>(R.id.pill_icon)?.setImageResource(action.inactiveRes)
+                view.findViewById<TextView>(R.id.pill_label)?.text =
+                action.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+                }
+             }
+             container.gravity = Gravity.CENTER_HORIZONTAL
+           }
         }
 
         private fun updateWidgetResources(iv: LaunchableImageView, action: WidgetAction) {

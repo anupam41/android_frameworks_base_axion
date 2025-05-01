@@ -31,4 +31,7 @@
     <item type="id" name="translate_y_clock_design_animator_tag" />
     <item type="id" name="translate_y_clock_design_animator_start_tag" />
     <item type="id" name="translate_y_clock_design_animator_end_tag" />
+    <item name="widget_controller_tag" type="id"/>
+    <item name="weather_controller_tag" type="id"/>
+    <item name="widget_controller_tag" type="id" />
 </resources>

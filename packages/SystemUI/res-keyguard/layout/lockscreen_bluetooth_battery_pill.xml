@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?><LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+android:id="@+id/widget_battery_combined_root"
+android:layout_width="0dp"
+android:layout_height="@dimen/kg_widget_pill_height"
+android:layout_weight="2"
+android:orientation="horizontal"
+android:gravity="center_vertical"
+android:paddingHorizontal="12dp"
+android:paddingVertical="8dp"
+android:background="@drawable/bg_widget_pill">
+
+<FrameLayout
+    android:layout_width="32dp"
+    android:layout_height="32dp"
+    android:layout_marginEnd="8dp">
+
+    <com.android.systemui.util.RingProgressView
+        android:id="@+id/device_battery_ring"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ImageView
+        android:id="@+id/device_icon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_device"
+        android:tint="?android:attr/textColorPrimary" />
+</FrameLayout>
+
+<FrameLayout
+    android:layout_width="32dp"
+    android:layout_height="32dp">
+
+    <com.android.systemui.util.RingProgressView
+        android:id="@+id/tws_battery_ring"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ImageView
+        android:id="@+id/tws_icon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_tws_default"
+        android:tint="?android:attr/textColorPrimary" />
+</FrameLayout>
+
+</LinearLayout>
