@@ -19716,11 +19716,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                 if (record != null && record.getSetAdj() >= minAdj) {
                     boolean hasUI = record.hasActivities();
                     if (!hasUI || includeUIProcesses) {
-                        toKill.add(new ProcessToKill(
-                            record.getPid(),
-                            record.getSetAdj(),
-                            record.processName
-                        ));
+                        toKill.add(new ProcessToKill(record));
                     }
                 }
             }
@@ -19729,12 +19725,12 @@ public class ActivityManagerService extends IActivityManager.Stub
 
             int killedCount = 0;
             for (ProcessToKill info : toKill) {
+                if (info.record != null && isAppFreezerEnabled()) {
+                    mOomAdjuster.mCachedAppOptimizer.freezeAppAsyncImmediateLSP(info.record);
+                }
                 Process.killProcess(info.pid);
                 killedCount++;
-
-                if (killedCount >= maxKillCount) {
-                    return;
-                }
+                if (killedCount >= maxKillCount) return;
             }
 
         } catch (Exception e) {}
@@ -19751,11 +19747,13 @@ public class ActivityManagerService extends IActivityManager.Stub
         public int adj;
         public String name; 
         public int pid;
+        public ProcessRecord record;
 
-        public ProcessToKill(int pid, int adj, String name) {
-            this.pid = pid;
-            this.adj = adj;
-            this.name = name;
+        public ProcessToKill(ProcessRecord record) {
+            this.pid = record.getPid();
+            this.adj = record.getSetAdj();
+            this.name = record.processName;
+            this.record = record;
         }
     }
 }
