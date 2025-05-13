@@ -51,7 +51,7 @@ object LockScreenWidgetsController {
     private lateinit var container: GridLayout
     private val viewControllers = mutableMapOf<View, ViewController>()
 
-    fun addView(view: View) {
+    fun addView(view: View, isPreview: Boolean = false) {
         if (viewControllers.containsKey(view)) return
         val controller = ViewController(view)
         controller.init()
@@ -62,7 +62,7 @@ object LockScreenWidgetsController {
         viewControllers.remove(view)?.deInit()
     }
 
-    class ViewController(private val view: View) : MediaSessionManagerHelper.MediaMetadataListener {
+    class ViewController(private val view: View, private val isPreview: Boolean = false) : MediaSessionManagerHelper.MediaMetadataListener {
         val context: Context = view.context
         val mediaSessionManagerHelper = MediaSessionManagerHelper.getInstance(context)
         val activityLauncherUtils = ActivityLauncherUtils(context)
@@ -116,6 +116,8 @@ object LockScreenWidgetsController {
             ?.getTag(R.id.widget_controller_tag) as? WidgetWeatherRangeController)?.destroy()
             (widgetButtons[WidgetAction.WELLBEING]
             ?.getTag(R.id.widget_controller_tag) as? WidgetWellbeingController)?.destroy()
+            (widgetButtons[WidgetAction.CALENDAR]
+            ?.getTag(R.id.widget_controller_tag) as? WidgetCalendarController)?.destroy()
             clearCallbacks()
             scope.cancel()
         }
@@ -155,16 +157,28 @@ object LockScreenWidgetsController {
         }
 
         fun updateWidgetViews() {
-            val widgetsSetting = Settings.System.getStringForUser(
-                 context.contentResolver, "lockscreen_widgets_extras", UserHandle.USER_CURRENT
-            )
-
             mainWidgets.clear()
-            widgetsSetting?.split(",")
-                 ?.mapNotNull { type ->
-                     WidgetAction.values().find { it.name.equals(type.trim(), ignoreCase = true) }
-                 }
-                 ?.let(mainWidgets::addAll)
+
+            if (isPreview) {
+               mainWidgets.addAll(
+                    listOf(
+                       WidgetAction.WEATHER,
+                       WidgetAction.WEATHER_TEMP,
+                       WidgetAction.BT_BATTERY,
+                       WidgetAction.TORCH
+                    )
+               )
+            } else {
+                val widgetsSetting = Settings.System.getStringForUser(
+                    context.contentResolver, "lockscreen_widgets_extras", UserHandle.USER_CURRENT
+                )
+
+                widgetsSetting?.split(",")
+                     ?.mapNotNull { type ->
+                         WidgetAction.values().find { it.name.equals(type.trim(), ignoreCase = true) }
+                     }
+                     ?.let(mainWidgets::addAll)
+            }
 
             updateColors()
             container.removeAllViews()
@@ -251,6 +265,10 @@ object LockScreenWidgetsController {
                WidgetAction.WELLBEING -> {
                     val controller = WidgetWellbeingController(context, widgetView)
                    widgetView.setTag(R.id.widget_controller_tag, controller)
+               }
+               WidgetAction.CALENDAR -> {
+                    val controller = WidgetCalendarController(context, view)
+                    view.setTag(R.id.widget_controller_tag, controller)
                }
            
            else -> {

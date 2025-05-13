@@ -191,12 +191,29 @@ enum class WidgetAction(
     ),
     
     WELLBEING(
-        shape = WidgetShape.ROUND,
+        shape = WidgetShape.PILL,
         activeRes = R.drawable.ic_wellbeing,
         inactiveRes = R.drawable.ic_wellbeing,
         onClick = { it.activityLauncherUtils.launchDigitalWellbeingApp() },
         registerCallback = { it.initWellbeingWidget() },
         unregisterCallback = { it.destroyWellbeingWidget() }
+    ),
+    CALENDAR(
+       shape = WidgetShape.PILL,
+       activeRes = R.drawable.ic_calendar_event,
+       inactiveRes = R.drawable.ic_calendar_event,
+       onClick = { it.activityLauncherUtils.launchCalendarApp() },
+       registerCallback = { controller ->
+         val view = controller.widgetButtons[WidgetAction.CALENDAR]
+         view?.let {
+            val widget = WidgetCalendarController(controller.context, it)
+            it.setTag(R.id.widget_controller_tag, widget)
+         }
+       },
+       unregisterCallback = { controller ->
+        (controller.widgetButtons[WidgetAction.CALENDAR]
+            ?.getTag(R.id.widget_controller_tag) as? WidgetCalendarController)?.destroy()
+        }
     );
 
     companion object {
